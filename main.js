@@ -1,5 +1,12 @@
 const { Plugin } = require('obsidian');
 
+
+function delay(time)
+{
+    return new Promise(resolve => setTimeout(resolve, time));
+}
+
+
 module.exports = class CollapseSubfoldersPlugin extends Plugin
 {
     onload()
@@ -47,21 +54,42 @@ module.exports = class CollapseSubfoldersPlugin extends Plugin
     handleFolderCollapse(folder)
     {
         const subfolders = folder.querySelectorAll('.nav-folder-children .nav-folder');
-        subfolders.forEach((subfolder) =>
+        const collapsePromises = Array.from(subfolders).map(subfolder => this.collapseSubfolder(subfolder));
+
+        Promise.all(collapsePromises).then(() =>
         {
-            if (!subfolder.classList.contains('is-collapsed'))
-            {
-                this.collapseSubfolder(subfolder);
-            }
+            console.log('All subfolders collapsed');
         });
     }
 
     collapseSubfolder(subfolder)
     {
-        const collapseIcon = subfolder.querySelector('.nav-folder-collapse-indicator');
-        if (collapseIcon)
-        {
-            collapseIcon.click(); // Simulate click to collapse
-        }
+        return new Promise(async resolve =>
+        { // Note the use of async here
+            const observer = new MutationObserver(mutations =>
+            {
+                mutations.forEach(mutation =>
+                {
+                    if (mutation.target.classList.contains('is-collapsed'))
+                    {
+                        observer.disconnect();
+                        resolve();
+                    }
+                });
+            });
+
+            observer.observe(subfolder, { attributes: true, attributeFilter: ['class'] });
+
+            const collapseIcon = subfolder.querySelector('.nav-folder-collapse-indicator');
+            if (collapseIcon && !subfolder.classList.contains('is-collapsed'))
+            {
+                collapseIcon.click();
+                await delay(100);
+            }
+            else
+            {
+                resolve();
+            }
+        });
     }
 };
