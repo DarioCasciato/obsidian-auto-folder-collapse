@@ -1,10 +1,10 @@
 {
     "id": "collapse-subfolders-plugin",
     "name": "Collapse Subfolders Plugin",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "minAppVersion": "0.12.0",
-    "description": "A plugin to collapse subfolders when a parent folder is minimized",
-    "author": "Your Name",
-    "authorUrl": "https://yourwebsite.com",
+    "description": "A plugin to auto-collapse subfolders when a parent folder is collapsed",
+    "author": "Dario Casciato",
+    "authorUrl": "https://github.com/DarioCasciato",
     "isDesktopOnly": true
 }
