@@ -12,6 +12,10 @@ A plugin for [Obsidian](https://obsidian.md) that automatically collapses all ch
    - Refresh the Community Plugin list.
    - Enable the new Plugin.
 
+## Demo
+
+(GIF Arriving shortly)
+
 ## Usage
 
 Once the plugin is enabled, it will automatically collapse all child folders when you collapse a parent folder. You don't need to do anything else!
