@@ -20,6 +20,8 @@ A plugin for [Obsidian](https://obsidian.md) that automatically collapses all ch
 
 Once the plugin is enabled, it will automatically collapse all child folders when you collapse a parent folder. You don't need to do anything else!
 
+**Note**: In some cases, the plugin stops working. To resolve the problem, call the `Reload Collapse Subfolders Plugin` command in the obsidian CLI.
+
 ## Troubleshooting
 
 If you encounter any issues with the plugin, try the following steps:
