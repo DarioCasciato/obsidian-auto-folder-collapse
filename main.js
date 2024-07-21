@@ -30,7 +30,6 @@ module.exports = class CollapseSubfoldersPlugin extends Plugin {
 
         this.observer = observer;
 
-        // Add a command to reload the plugin
         this.addCommand({
             id: 'reload-collapse-subfolders-plugin',
             name: 'Reload Collapse Subfolders Plugin',
@@ -48,7 +47,7 @@ module.exports = class CollapseSubfoldersPlugin extends Plugin {
     async reloadPlugin() {
         console.log('Reloading Collapse Subfolders Plugin');
         this.onunload();
-        await delay(100); // Ensure there's a slight delay between unload and load
+        await delay(100); // delay for ensuring unload and load
         this.onload();
     }
 
