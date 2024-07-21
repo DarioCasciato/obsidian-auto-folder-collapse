@@ -14,7 +14,7 @@ A plugin for [Obsidian](https://obsidian.md) that automatically collapses all ch
 
 ## Demo
 
-(GIF Arriving shortly)
+<img src="./folder-collapse.gif" width="800">
 
 ## Usage
 
