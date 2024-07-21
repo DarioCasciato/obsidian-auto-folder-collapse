@@ -4,6 +4,15 @@ A plugin for [Obsidian](https://obsidian.md) that automatically collapses all ch
 
 ## Installation
 
+### Downloading from the obsidian.md Community Plugin Browser
+
+1. Open Obsidian and go to `Settings`.
+2. Navigate to the `Community plugins` section.
+3. Click on `Browse` and search for `Auto Folder Collapse`.
+4. Click `Install` and then `Enable`.
+
+### Dwonloading from the GitHub Repository
+
 1. Download the plugin files from the [GitHub repository](https://github.com/DarioCasciato).
 2. Copy the Plugin Folder to your Obsidian vault's plugins folder: `<vault>/.obsidian/plugins/`.
 3. Enable the plugin in Obsidian:
