@@ -1,40 +1,12 @@
 const { Plugin } = require('obsidian');
 
-function delay(time) {
-    return new Promise(resolve => setTimeout(resolve, time));
-}
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 module.exports = class CollapseSubfoldersPlugin extends Plugin {
-    onload() {
+    async onload() {
         console.log('Loading Collapse Subfolders Plugin');
-
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    const target = mutation.target;
-                    if (target.classList.contains('is-collapsed')) {
-                        this.handleFolderCollapse(target);
-                    }
-                }
-            });
-        });
-
-        const fileExplorer = document.querySelector('.workspace-leaf-content');
-        if (fileExplorer) {
-            observer.observe(fileExplorer, {
-                attributes: true,
-                subtree: true,
-                attributeFilter: ['class'],
-            });
-        }
-
-        this.observer = observer;
-
-        this.addCommand({
-            id: 'reload-collapse-subfolders-plugin',
-            name: 'Reload Collapse Subfolders Plugin',
-            callback: () => this.reloadPlugin()
-        });
+        await this.setupObserverWithRetries();
     }
 
     onunload() {
@@ -44,11 +16,35 @@ module.exports = class CollapseSubfoldersPlugin extends Plugin {
         }
     }
 
-    async reloadPlugin() {
-        console.log('Reloading Collapse Subfolders Plugin');
-        this.onunload();
-        await delay(100); // delay for ensuring unload and load
-        this.onload();
+    async setupObserverWithRetries(retries = 3, delayMs = 1000) {
+        for (let i = 0; i < retries; i++) {
+            const fileExplorer = document.querySelector('.workspace-leaf-content');
+            if (fileExplorer) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'class') {
+                            const target = mutation.target;
+                            if (target.classList.contains('is-collapsed')) {
+                                this.handleFolderCollapse(target);
+                            }
+                        }
+                    });
+                });
+
+                observer.observe(fileExplorer, {
+                    attributes: true,
+                    subtree: true,
+                    attributeFilter: ['class'],
+                });
+
+                this.observer = observer;
+                return;
+            } else {
+                console.log(`File explorer not found, retrying in ${delayMs}ms...`);
+                await sleep(delayMs);
+            }
+        }
+        console.error('Failed to set up observer after multiple retries');
     }
 
     handleFolderCollapse(folder) {
@@ -56,7 +52,6 @@ module.exports = class CollapseSubfoldersPlugin extends Plugin {
         const collapsePromises = Array.from(subfolders).map(subfolder => this.collapseSubfolder(subfolder));
 
         Promise.all(collapsePromises).then(() => {
-            console.log('All subfolders collapsed');
         });
     }
 
@@ -76,7 +71,7 @@ module.exports = class CollapseSubfoldersPlugin extends Plugin {
             const collapseIcon = subfolder.querySelector('.nav-folder-collapse-indicator');
             if (collapseIcon && !subfolder.classList.contains('is-collapsed')) {
                 collapseIcon.click();
-                await delay(100);
+                await sleep(100);
             } else {
                 resolve();
             }

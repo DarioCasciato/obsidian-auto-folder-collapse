@@ -1,9 +1,9 @@
 {
     "id": "auto-folder-collapse",
     "name": "Auto Folder Collapse",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "minAppVersion": "0.12.0",
-    "description": "A plugin to auto-collapse subfolders when a parent folder is collapsed",
+    "description": "Automatically collapses subfolders when a parent folder is collapsed",
     "author": "Dario Casciato",
     "authorUrl": "https://github.com/DarioCasciato",
     "isDesktopOnly": true
