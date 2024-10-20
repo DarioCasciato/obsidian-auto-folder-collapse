@@ -43,6 +43,8 @@ If the problem persists, please report it on the [GitHub Issues page](https://gi
 
 Developed by [Dario Casciato](https://github.com/DarioCasciato).
 
+[Buy me a espresso](https://buymeacoffee.com/dcasciato0s)
+
 ## License
 
 This plugin is licensed under the [MIT License](https://github.com/DarioCasciato/obsidian-auto-folder-collapse/blob/main/LICENSE).
