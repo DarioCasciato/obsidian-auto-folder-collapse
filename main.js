@@ -1,196 +1,273 @@
-const { Plugin } = require('obsidian');
+const { Plugin, Setting, PluginSettingTab } = require('obsidian');
 
-// Utility function to delay execution
+const DEFAULT_SETTINGS = {
+    autoCollapseEnabled: false,
+    inactivityMinutes: 5
+};
+
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-module.exports = class CollapseSubfoldersPlugin extends Plugin {
-    async onload() {
-        console.log('Loading Auto Folder Collapse Plugin'); // Startup log
+module.exports = class AutoFolderCollapsePlugin extends Plugin
+{
+    async onload()
+    {
+        console.log('Auto Folder Collapse Plugin loaded');
 
-        // Initial setup when layout is ready
-        this.registerEvent(this.app.workspace.on('layout-ready', () => {
-            this.setupObserverWithRetries();
-        }));
+        await this.loadSettings();
+        this.addSettingTab(new AutoFolderCollapseSettingTab(this.app, this));
 
-        // Set up a MutationObserver to watch for workspace layout changes
-        this.setupWorkspaceObserver();
+        this.registerEvent(
+            this.app.workspace.on('layout-ready', () =>
+            {
+                this.setupExplorerObserver();
+            })
+        );
+
+        if (this.settings.autoCollapseEnabled)
+        {
+            this.startInactivityTimer();
+        }
     }
 
-    onunload() {
-        // Disconnect the MutationObserver for file explorer
-        if (this.observer) {
+    onunload()
+    {
+        if (this.observer)
+        {
             this.observer.disconnect();
-            console.log('Auto Folder Collapse Plugin unloaded and observer disconnected.'); // Shutdown log
         }
-
-        // Disconnect the MutationObserver for workspace
-        if (this.workspaceObserver) {
-            this.workspaceObserver.disconnect();
-            console.log('Workspace observer disconnected.');
-        }
+        this.stopInactivityTimer();
+        console.log('Auto Folder Collapse Plugin unloaded');
     }
 
-     //Sets up the primary MutationObserver with retries.
+    async loadSettings()
+    {
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
 
-    async setupObserverWithRetries(retries = 5, delayMs = 1000) {
-        for (let i = 0; i < retries; i++) {
-            const fileExplorer = this.getFileExplorerElement();
-            if (fileExplorer) {
-                this.setupMutationObserver(fileExplorer);
+    async saveSettings()
+    {
+        await this.saveData(this.settings);
+    }
+
+    // Inactivity timer
+    startInactivityTimer()
+    {
+        this.stopInactivityTimer();
+
+        const timeout = this.settings.inactivityMinutes * 60 * 1000;
+        this.timer = window.setTimeout(() => this.collapseAllTopFolders(), timeout);
+
+        this.resetHandler = () =>
+        {
+            if (!this.settings.autoCollapseEnabled)
+            {
                 return;
-            } else {
-                console.warn(`File Explorer element not found. Retry ${i + 1}/${retries} after ${delayMs}ms.`);
-                await sleep(delayMs);
             }
-        }
-        console.error('Auto Folder Collapse Plugin: File Explorer element not found after all retries.');
+            clearTimeout(this.timer);
+            this.timer = window.setTimeout(() => this.collapseAllTopFolders(), timeout);
+        };
+
+        ['mousemove', 'keydown', 'click', 'focus'].forEach(evt =>
+        {
+            window.addEventListener(evt, this.resetHandler, true);
+        });
     }
 
+    stopInactivityTimer()
+    {
+        if (this.timer)
+        {
+            clearTimeout(this.timer);
+        }
+        if (this.resetHandler)
+        {
+            ['mousemove', 'keydown', 'click', 'focus'].forEach(evt =>
+            {
+                window.removeEventListener(evt, this.resetHandler, true);
+            });
+        }
+    }
 
-    //Retrieves the file explorer DOM element using various selectors.
-    getFileExplorerElement() {
+    collapseAllTopFolders()
+    {
+        const explorer = this.getFileExplorerElement();
+        if (!explorer)
+        {
+            return;
+        }
+        const folders = explorer.querySelectorAll('.nav-folder, .tree-item-folder');
+        folders.forEach(folder =>
+        {
+            if (!folder.classList.contains('is-collapsed'))
+            {
+                const icon = folder.querySelector('.collapse-icon') || folder.querySelector('[data-action="toggle-folder"]');
+                icon?.click();
+            }
+        });
+        console.log('Parent folders collapsed after inactivity');
+    }
+
+    // Explorer observer
+    async setupExplorerObserver(retries = 5, delayMs = 1000)
+    {
+        for (let i = 0; i < retries; i++)
+        {
+            const explorer = this.getFileExplorerElement();
+            if (explorer)
+            {
+                this.observeExplorer(explorer);
+                return;
+            }
+            await sleep(delayMs);
+        }
+        console.error('File Explorer element not found');
+    }
+
+    getFileExplorerElement()
+    {
         const selectors = [
             '.nav-files-container.node-insert-event',
             '.file-explorer-view',
             '.workspace-leaf-content[data-type="file-explorer"]'
         ];
-
-        for (const selector of selectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-                return element;
+        for (const selector of selectors)
+        {
+            const el = document.querySelector(selector);
+            if (el)
+            {
+                return el;
             }
         }
         return null;
     }
 
-    // Sets up the MutationObserver to monitor folder collapses within the file explorer.
-    setupMutationObserver(fileExplorer) {
-        if (!fileExplorer) {
-            console.error('Cannot set up MutationObserver: fileExplorer is null.');
-            return;
-        }
-
-        // Disconnect existing observer if any to prevent multiple observers
-        if (this.observer) {
-            this.observer.disconnect();
-        }
-
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+    observeExplorer(explorer)
+    {
+        const observer = new MutationObserver(mutations =>
+        {
+            for (const mutation of mutations)
+            {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class')
+                {
                     const target = mutation.target;
-                    if (target && target.classList.contains('is-collapsed')) {
-                        this.handleFolderCollapse(target);
+                    if (target.classList.contains('is-collapsed'))
+                    {
+                        this.collapseChildFolders(target);
                     }
                 }
             }
         });
 
-        observer.observe(fileExplorer, {
-            attributes: true,
-            subtree: true,
-            attributeFilter: ['class'],
-        });
-
+        observer.observe(explorer, { attributes: true, subtree: true, attributeFilter: ['class'] });
         this.observer = observer;
     }
 
-    // Handles the collapse of a folder by collapsing all its subfolders.
-    async handleFolderCollapse(folder) {
-        if (!folder) {
-            console.error('handleFolderCollapse called with null folder.');
+    async collapseChildFolders(folder)
+    {
+        const container = folder.querySelector('.nav-folder-children') || folder.querySelector('.child-folder-container');
+        if (!container)
+        {
             return;
         }
-
-        const subfoldersContainer = folder.querySelector('.nav-folder-children') || folder.querySelector('.child-folder-container');
-        if (!subfoldersContainer) {
-            return;
-        }
-
-        const subfolders = subfoldersContainer.querySelectorAll('.nav-folder') || subfoldersContainer.querySelectorAll('.child-folder');
-        if (!subfolders.length) {
-            return;
-        }
-
-        const collapsePromises = Array.from(subfolders).map(subfolder => this.collapseSubfolder(subfolder));
-        try {
-            await Promise.all(collapsePromises);
-        } catch (error) {
-            console.error('Error collapsing subfolders:', error);
-        }
+        const subfolders = container.querySelectorAll('.nav-folder, .child-folder');
+        await Promise.all(Array.from(subfolders).map(sf => this.collapseSubfolder(sf)));
     }
 
-    // Collapses a single subfolder
-    collapseSubfolder(subfolder) {
-        return new Promise(async (resolve) => {
-            if (!subfolder) {
-                console.error('collapseSubfolder called with null subfolder.');
-                resolve();
-                return;
-            }
-
-            const observer = new MutationObserver((mutations) => {
-                for (const mutation of mutations) {
-                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                        if (mutation.target.classList.contains('is-collapsed')) {
-                            observer.disconnect();
-                            resolve();
-                        }
+    collapseSubfolder(subfolder)
+    {
+        return new Promise(async resolve =>
+        {
+            const localObserver = new MutationObserver(mutations =>
+            {
+                for (const mutation of mutations)
+                {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class' && mutation.target.classList.contains('is-collapsed'))
+                    {
+                        localObserver.disconnect();
+                        resolve();
                     }
                 }
             });
 
-            observer.observe(subfolder, { attributes: true, attributeFilter: ['class'] });
+            localObserver.observe(subfolder, { attributes: true, attributeFilter: ['class'] });
 
-            const collapseIcon = subfolder.querySelector('.collapse-icon') || subfolder.querySelector('[data-action="toggle-folder"]');
-            if (collapseIcon && !subfolder.classList.contains('is-collapsed')) {
-                try {
-                    collapseIcon.click();
-                    await sleep(200); // Accommodate potential animation delays
-                } catch (error) {
-                    console.error('Error clicking collapse icon:', error);
-                    observer.disconnect();
-                    resolve();
+            const icon = subfolder.querySelector('.collapse-icon') || subfolder.querySelector('[data-action="toggle-folder"]');
+            if (icon && !subfolder.classList.contains('is-collapsed'))
+            {
+                try
+                {
+                    icon.click();
+                    await sleep(200);
                 }
-            } else {
-                observer.disconnect();
-                resolve();
+                catch (e)
+                {
+                    console.error('Error collapsing subfolder', e);
+                }
             }
+            localObserver.disconnect();
+            resolve();
         });
     }
+};
 
-    // Sets up a MutationObserver to monitor workspace layout changes and re-register the primary MutationObserver as needed.
-    setupWorkspaceObserver() {
-        const workspaceRoot = document.querySelector('.workspace');
-        if (!workspaceRoot) {
-            console.error('Workspace root element not found. Cannot set up workspace observer.');
-            return;
-        }
+class AutoFolderCollapseSettingTab extends PluginSettingTab
+{
+    constructor(app, plugin)
+    {
+        super(app, plugin);
+        this.plugin = plugin;
+    }
 
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Check if the added node is the file explorer
-                            const fileExplorer = node.querySelector('.nav-files-container.node-insert-event') ||
-                                                 node.querySelector('.file-explorer-view') ||
-                                                 node.querySelector('.workspace-leaf-content[data-type="file-explorer"]');
-                            if (fileExplorer) {
-                                this.setupObserverWithRetries();
+    display()
+    {
+        const { containerEl } = this;
+        containerEl.empty();
+        containerEl.createEl('h2', { text: 'Auto Folder Collapse – Settings' });
+
+        new Setting(containerEl)
+            .setName('Enable auto collapse')
+            .setDesc('Collapse all parent folders after a period of inactivity.')
+            .addToggle(toggle =>
+            {
+                toggle
+                    .setValue(this.plugin.settings.autoCollapseEnabled)
+                    .onChange(async value =>
+                    {
+                        this.plugin.settings.autoCollapseEnabled = value;
+                        await this.plugin.saveSettings();
+                        if (value)
+                        {
+                            this.plugin.startInactivityTimer();
+                        }
+                        else
+                        {
+                            this.plugin.stopInactivityTimer();
+                        }
+                    });
+            });
+
+        new Setting(containerEl)
+            .setName('Inactivity duration (minutes)')
+            .setDesc('Minutes of inactivity before collapsing parent folders.')
+            .addText(text =>
+            {
+                text
+                    .setPlaceholder('5')
+                    .setValue(String(this.plugin.settings.inactivityMinutes))
+                    .onChange(async value =>
+                    {
+                        const num = parseInt(value);
+                        if (!isNaN(num) && num > 0)
+                        {
+                            this.plugin.settings.inactivityMinutes = num;
+                            await this.plugin.saveSettings();
+                            if (this.plugin.settings.autoCollapseEnabled)
+                            {
+                                this.plugin.startInactivityTimer();
                             }
                         }
                     });
-                }
-            }
-        });
-
-        observer.observe(workspaceRoot, {
-            childList: true,
-            subtree: true
-        });
-
-        this.workspaceObserver = observer;
+            });
     }
-};
+}
+
