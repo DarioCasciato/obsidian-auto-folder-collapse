@@ -29,6 +29,17 @@ A plugin for [Obsidian](https://obsidian.md) that automatically collapses all ch
 
 Once the plugin is enabled, it will automatically collapse all child folders when you collapse a parent folder. You don't need to do anything else!
 
+The plugin offers two independent features, each controlled by a toggle in
+**Settings → Auto Folder Collapse**.
+
+| Feature | Default | What it does |
+| ------- | ------- | ------------ |
+| **Auto-collapse children on parent collapse** | **Off** | When you collapse a folder, every sub-folder inside it is collapsed too (original behaviour). |
+| **Exclusive accordion** | **Off** | When you expand a folder, all other folders that are not its ancestors or descendants are automatically collapsed. This keeps the sidebar focused on the area you’re working in. |
+
+Enable or disable either feature at any time; the change takes effect immediately.
+
+
 ## Troubleshooting
 
 If you encounter any issues with the plugin, try the following steps:
