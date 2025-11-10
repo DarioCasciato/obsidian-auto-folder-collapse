@@ -17,11 +17,19 @@ module.exports = class AutoFolderCollapsePlugin extends Plugin
 		await this.loadSettings();
 		this.addSettingTab(new AutoFolderCollapseSettingTab(this.app, this));
 
+		const triggerSetup = () => this.setupExplorer();
+		if (this.app.workspace.layoutReady)
+		{
+			triggerSetup();
+		}
+		else
+		{
+			this.registerEvent(
+				this.app.workspace.on('layout-ready', triggerSetup)
+			);
+		}
 		this.registerEvent(
-			this.app.workspace.on('layout-ready', () => this.setupExplorer())
-		);
-		this.registerEvent(
-			this.app.workspace.on('layout-change', () => this.setupExplorer())
+			this.app.workspace.on('layout-change', triggerSetup)
 		);
 
 		if (this.settings.autoCollapseEnabled)
@@ -119,8 +127,9 @@ module.exports = class AutoFolderCollapsePlugin extends Plugin
 		{
 			if (!this.settings.exclusiveAccordionEnabled) return;
 
-			const target = ev.target instanceof HTMLElement
-				? ev.target.closest('.nav-folder, .tree-item-folder')
+			const sourceEl = ev.target instanceof Element ? ev.target : null;
+			const target = sourceEl
+				? sourceEl.closest('.nav-folder, .tree-item-folder')
 				: null;
 			if (!target) return;
 
