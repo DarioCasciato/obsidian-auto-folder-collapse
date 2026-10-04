@@ -29,13 +29,22 @@ A plugin for [Obsidian](https://obsidian.md) that automatically collapses all ch
 
 Once the plugin is enabled, it will automatically collapse all child folders when you collapse a parent folder. You don't need to do anything else!
 
-The plugin offers two independent features, each controlled by a toggle in
-**Settings → Auto Folder Collapse**.
+The plugin offers the following features, configured in **Settings → Auto Folder Collapse**.
 
 | Feature | Default | What it does |
 | ------- | ------- | ------------ |
-| **Auto-collapse children on parent collapse** | **Off** | When you collapse a folder, every sub-folder inside it is collapsed too (original behaviour). |
+| **Auto collapse after inactivity** | **300 seconds** | After this many seconds of inactivity, every open folder is collapsed. Set the slider to 0 to disable. |
+| **Auto-collapse children on parent collapse** | **Always on** | When you collapse a folder, every sub-folder inside it is collapsed too (original behaviour). |
 | **Exclusive accordion** | **Off** | When you expand a folder, all other folders that are not its ancestors or descendants are automatically collapsed. This keeps the sidebar focused on the area you’re working in. |
+| **Immune folders** | **None** | Folders that always stay collapsed or always stay expanded, regardless of the active file. |
+
+### Immune folders
+
+Immune folders ignore the automatic collapse behavior. Use **Add folder** to select a folder from the vault or type its path, adding it to **Always collapsed** to keep it collapsed even when a file inside it is open, or to **Always expanded** to keep it expanded no matter which file is open or how long you are inactive.
+
+Every parent folder of an added folder inherits the behavior: adding one folder covers its whole subtree of ancestors.
+
+Immune folders also resist manual toggling in the file explorer: an **Always collapsed** folder cannot be expanded, and an **Always expanded** folder cannot be collapsed.
 
 Enable or disable either feature at any time; the change takes effect immediately.
 
